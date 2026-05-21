@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>חדר בריחה דיגיטלי</title>
+    <!-- Load Tailwind CSS for modern, responsive styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Assistant', sans-serif;
+            background-color: #0f172a;
+            color: #f8fafc;
+        }
+        .bg-glow {
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.5);
+        }
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-center p-4">
+
+    <div id="game-container" class="w-full max-w-2xl bg-slate-900 border border-slate-700 rounded-2xl p-6 md:p-10 shadow-2xl relative overflow-hidden">
+        
+        <!-- Welcome Screen -->
+        <div id="welcome-screen" class="text-center space-y-6">
+            <h1 class="text-4xl md:text-6xl font-bold text-blue-400 mb-4">ברוכים הבאים לחדר הבריחה</h1>
+            <p class="text-lg text-slate-300">האם אתם מוכנים לאתגר? הצלחתכם תלויה בתשומת הלב לפרטים הקטנים.</p>
+            <div class="py-10">
+                <div class="text-6xl mb-4">🔐</div>
+            </div>
+            <button onclick="startGame()" class="w-full md:w-auto px-10 py-4 bg-blue-600 hover:bg-blue-500 transition-all rounded-full font-bold text-xl shadow-lg hover:scale-105 active:scale-95">
+                התחל במשימה
+            </button>
+        </div>
+
+        <div id="game-content" class="hidden space-y-6 fade-in">
+            <!-- Progress Bar -->
+            <div class="w-full bg-slate-800 rounded-full h-2 mb-6">
+                <div id="progress-bar" class="bg-blue-500 h-2 rounded-full transition-all duration-500" style="width: 0%"></div>
+            </div>
+
+            <!-- Video Container -->
+            <div class="relative aspect-video rounded-xl overflow-hidden bg-black shadow-inner border border-slate-800">
+                <iframe id="video-frame" class="absolute inset-0 w-full h-full" src="" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+            </div>
+
+            <!-- Riddle Section -->
+            <div class="space-y-4">
+                <h2 id="level-title" class="text-2xl font-bold text-blue-300">חידה מס' 1</h2>
+                <p id="riddle-text" class="text-slate-300 text-lg leading-relaxed"></p>
+                
+                <div class="flex flex-col space-y-2">
+                    <label for="answer-input" class="text-sm text-slate-500">הזינו את התשובה כאן:</label>
+                    <input type="text" id="answer-input" placeholder="התשובה שלך..." class="w-full bg-slate-800 border border-slate-700 rounded-lg p-4 focus:ring-2 focus:ring-blue-500 outline-none text-center text-xl tracking-widest">
+                </div>
+                
+                <button onclick="checkAnswer()" class="w-full py-4 bg-emerald-600 hover:bg-emerald-500 transition-all rounded-lg font-bold text-lg shadow-md">
+                    בדיקת תשובה
+                </button>
+                
+                <p id="feedback-msg" class="text-center h-6 text-red-400 font-medium"></p>
+            </div>
+        </div>
+
+        <div id="success-screen" class="hidden text-center space-y-8 fade-in">
+            <h1 class="text-5xl font-bold text-emerald-400">כל הכבוד!</h1>
+            <div class="text-8xl">🏆</div>
+            <p class="text-xl text-slate-300">הצלחתם לפתור את כל החידות ולסיים את חדר הבריחה בזמן.</p>
+            <button onclick="location.reload()" class="px-8 py-3 border border-slate-600 rounded-full hover:bg-slate-800 transition-all">
+                שחק שוב
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // מבנה הנתונים - כאן נכניס את הסרטונים והחידות שלך
+        // ברגע שתשלח לי את הקישורים והשאלות, אעדכן אותם ישירות פה!
+        const gameData = [
+            {
+                title: "ההתחלה המסתורית",
+                videoUrl: "https://www.youtube.com/embed/dQw4w9WgXcQ", // דוגמה בלבד
+                riddle: "מהו המספר שמופיע על הקיר בסוף הסרטון?",
+                answer: "1234"
+            },
+            {
+                title: "המפתח האבוד",
+                videoUrl: "https://www.youtube.com/embed/dQw4w9WgXcQ", // דוגמה בלבד
+                riddle: "כמה פעמים הופיע המפתח בסרטון הנוכחי?",
+                answer: "3"
+            },
+            {
+                title: "החדר האחרון",
+                videoUrl: "https://www.youtube.com/embed/dQw4w9WgXcQ", // דוגמה בלבד
+                riddle: "מה הצבע של הדלת שנסגרה בסוף?",
+                answer: "אדום"
+            }
+        ];
+
+        let currentLevel = 0;
+
+        function startGame() {
+            document.getElementById('welcome-screen').classList.add('hidden');
+            document.getElementById('game-content').classList.remove('hidden');
+            loadLevel();
+        }
+
+        function loadLevel() {
+            const level = gameData[currentLevel];
+            document.getElementById('level-title').innerText = `שלב ${currentLevel + 1}: ${level.title}`;
+            document.getElementById('riddle-text').innerText = level.riddle;
+            document.getElementById('video-frame').src = level.videoUrl;
+            document.getElementById('answer-input').value = '';
+            document.getElementById('feedback-msg').innerText = '';
+            
+            // עדכון פס התקדמות
+            const progress = (currentLevel / gameData.length) * 100;
+            document.getElementById('progress-bar').style.width = `${progress}%`;
+        }
+
+        function checkAnswer() {
+            const input = document.getElementById('answer-input').value.trim();
+            const correct = gameData[currentLevel].answer;
+            const feedback = document.getElementById('feedback-msg');
+
+            if (input === correct) {
+                currentLevel++;
+                if (currentLevel < gameData.length) {
+                    feedback.innerText = "נכון! עוברים לשלב הבא...";
+                    feedback.classList.replace('text-red-400', 'text-emerald-400');
+                    setTimeout(() => {
+                        feedback.classList.replace('text-emerald-400', 'text-red-400');
+                        loadLevel();
+                    }, 1500);
+                } else {
+                    showSuccess();
+                }
+            } else {
+                feedback.innerText = "תשובה שגויה, נסו שוב!";
+                // אפקט רעידה לקלט
+                const inputEl = document.getElementById('answer-input');
+                inputEl.classList.add('translate-x-1');
+                setTimeout(() => inputEl.classList.remove('translate-x-1'), 100);
+            }
+        }
+
+        function showSuccess() {
+            document.getElementById('game-content').classList.add('hidden');
+            document.getElementById('success-screen').classList.remove('hidden');
+            document.getElementById('progress-bar').style.width = `100%`;
+        }
+
+        // האזנה למקש Enter בתיבת הטקסט
+        document.getElementById('answer-input').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') {
+                checkAnswer();
+            }
+        });
+    </script>
+</body>
+</html>
